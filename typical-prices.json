@@ -1,0 +1,12 @@
+{
+  "_note": "Rough typical RETURN economy fares from Auckland in NZD, used only until the monitor has collected its own price history (5+ checks per destination). Edit freely.",
+  "SYD": 650, "MEL": 700, "BNE": 650, "OOL": 600, "CNS": 850, "ADL": 800, "PER": 1100, "DRW": 1100,
+  "NAN": 900, "RAR": 1100, "APW": 900, "TBU": 900, "NOU": 1000, "PPT": 1400, "VLI": 1100,
+  "HNL": 1500, "LAX": 1900, "SFO": 2000, "SEA": 2100, "YVR": 1900, "NYC": 2600, "CHI": 2500,
+  "TYO": 1800, "OSA": 1700, "SEL": 1700, "HKG": 1600, "TPE": 1600, "SHA": 1700, "BJS": 1800,
+  "SIN": 1500, "BKK": 1500, "KUL": 1400, "DPS": 1200, "MNL": 1400, "SGN": 1500, "HAN": 1600,
+  "DEL": 2000, "DXB": 2200, "DOH": 2300,
+  "LON": 2900, "PAR": 2900, "FRA": 2900, "ROM": 2900, "AMS": 2900, "BCN": 2900, "ATH": 3000,
+  "SCL": 2000, "BUE": 2200,
+  "WLG": 250, "CHC": 250, "ZQN": 350, "DUD": 300, "NSN": 250
+}

@@ -1,0 +1,7 @@
+{
+  "origin": "AKL",
+  "currency": "nzd",
+  "dealThresholdPercent": 35,
+  "monthsAhead": 6,
+  "includeDomestic": false
+}
