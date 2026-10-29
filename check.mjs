@@ -31,6 +31,7 @@ async function main() {
   if (process.env.RESEND_API_KEY) settings.resendApiKey = process.env.RESEND_API_KEY;
   if (process.env.EMAIL_TO) settings.emailTo = process.env.EMAIL_TO;
   if (process.env.SERPAPI_KEY) settings.serpApiKey = process.env.SERPAPI_KEY;
+  for (const k of Object.keys(settings)) if (String(settings[k]).startsWith("PASTE-")) delete settings[k];
   const noEmail = process.argv.includes("--no-email");
   const typical = await readJson(join(ROOT, "typical-prices.json"), {});
   await mkdir(DATA, { recursive: true });
