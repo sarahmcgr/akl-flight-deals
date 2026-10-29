@@ -30,8 +30,13 @@ const AIRLINES = {
   HA: ["Hawaiian Airlines", "https://www.hawaiianairlines.com"], LA: ["LATAM", "https://www.latamairlines.com/nz/en"],
   EY: ["Etihad", "https://www.etihad.com/en-nz"], TK: ["Turkish Airlines", "https://www.turkishairlines.com"],
 };
-const airline = (code) => AIRLINES[code] || null;
+const AIRLINES_BY_NAME = Object.fromEntries(Object.values(AIRLINES).map((a) => [a[0].toLowerCase(), a]));
+// Cached fares give IATA codes ("FJ"); live Google Flights results give names ("Fiji Airways")
+const airline = (code) => AIRLINES[code] || AIRLINES_BY_NAME[String(code).toLowerCase()] || null;
 const airlineName = (code) => airline(code)?.[0] || code;
+const bookable = (code) => airline(code) || (code && code.length > 3);
+const liveNote = (r) => r.live ? `Live Google Flights price${r.priceLevel ? ` · Google rates it ${r.priceLevel}` : ""}` : "Cached price, not yet confirmed";
+const usualText = (r) => r.typicalRange ? `${nzd(r.typicalRange[0])}–${nzd(r.typicalRange[1])}` : nzd(r.normal);
 
 // Sticker palette, cycled across deal badges: [fill, text]
 const STICKERS = [["#fb4903", "#fff"], ["#ffd731", "#000"], ["#55db9c", "#000"], ["#e9ccff", "#000"], ["#5c4ade", "#fff"], ["#4da2ff", "#000"]];
@@ -49,9 +54,10 @@ export function renderEmail(deals, settings) {
           <div style="${font};font-weight:800;font-size:22px;line-height:1.1;color:#000;margin-top:10px;text-transform:uppercase">Auckland ⇄ ${esc(d.city)}</div>
           <div style="${font};font-size:13px;color:#000;opacity:.6;margin-top:2px">${esc(d.country)}</div>
           <div style="${font};margin-top:12px"><b style="font-size:26px;color:#000">${nzd(d.price)}</b>
-            <span style="text-decoration:line-through;color:#000;opacity:.45;margin-left:6px;font-size:15px">${nzd(d.normal)}</span></div>
+            <span style="color:#000;opacity:.55;margin-left:6px;font-size:14px">usually ${usualText(d)}</span></div>
+          <div style="${font};font-size:12px;font-weight:700;letter-spacing:.03em;color:#000;margin-top:6px">${d.live ? "✓ " : ""}${esc(liveNote(d).toUpperCase())}</div>
           <div style="${font};font-size:13px;color:#000;opacity:.7;margin-top:4px">${fmtDate(d.departDate)} – ${fmtDate(d.returnDate)} · ${esc(airlineName(d.airline))} · ${stopsText(d.stops)}</div>
-          <a href="${esc(searchLink(d))}" style="display:inline-block;margin-top:14px;background:#000;color:#fff;border-radius:999px;padding:10px 16px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">COMPARE &amp; BOOK →</a>${airline(d.airline) ? ` <a href="${esc(searchLink(d, airlineName(d.airline)))}" style="display:inline-block;margin:14px 0 0 6px;background:#fff;color:#000;border:1px solid #000;border-radius:999px;padding:9px 15px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">BOOK WITH ${esc(airlineName(d.airline).toUpperCase())}</a>` : ""}
+          <a href="${esc(searchLink(d))}" style="display:inline-block;margin-top:14px;background:#000;color:#fff;border-radius:999px;padding:10px 16px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">COMPARE &amp; BOOK →</a>${bookable(d.airline) ? ` <a href="${esc(searchLink(d, airlineName(d.airline)))}" style="display:inline-block;margin:14px 0 0 6px;background:#fff;color:#000;border:1px solid #000;border-radius:999px;padding:9px 15px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">BOOK WITH ${esc(airlineName(d.airline).toUpperCase())}</a>` : ""}
         </td></tr>
       </table>
     </td></tr>`;
@@ -60,7 +66,7 @@ export function renderEmail(deals, settings) {
   <div style="max-width:560px;margin:0 auto">
     <div style="background:#000;color:#fff;${font};font-weight:700;font-size:12px;letter-spacing:.032em;text-align:center;padding:8px;border-radius:999px">NEW DEALS FROM AUCKLAND · ${settings.dealThresholdPercent ?? 35}%+ BELOW USUAL</div>
     <h1 style="${font};font-weight:900;font-size:44px;line-height:.85;color:#000;margin:24px 0 8px;text-transform:uppercase">Cheap skies<br>out of AKL</h1>
-    <p style="${font};font-size:14px;color:#000;opacity:.7;margin:0 0 20px">Cached return fares. Confirm on the booking site before you pay.</p>
+    <p style="${font};font-size:14px;color:#000;opacity:.7;margin:0 0 20px">${deals.every((d) => d.live) ? "Each price below was re-checked live on Google Flights this morning." : "Cached prices from the last 48 hours."} Fares move fast, so confirm before you pay.</p>
     <table width="100%" cellpadding="0" cellspacing="0">${rows}</table>
   </div></div>`;
 }
@@ -103,7 +109,8 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
       <p class="label">${esc(r.country) || "&nbsp;"}</p>
       <h3 class="${r.city.length > 11 ? "xlong" : r.city.length > 8 ? "long" : ""}">${esc(r.city)}</h3>
       <p class="price">${nzd(r.price)}</p>
-      <p class="was">Usually <s>${nzd(r.normal)}</s></p>
+      <p class="was">Usually ${r.typicalRange ? usualText(r) : `<s>${nzd(r.normal)}</s>`}</p>
+      <p class="live ${r.live ? "on" : ""}">${r.live ? "✓ " : ""}${esc(liveNote(r))}</p>
       <div class="chips">
         <span class="chip">${fmtDate(r.departDate)} – ${fmtDate(r.returnDate)}</span>
         <span class="chip">${esc(airlineName(r.airline))}</span>
@@ -111,14 +118,14 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
       </div>
       <div class="actions">
         <a class="btn btn-fill" href="${esc(searchLink(r))}" target="_blank" rel="noopener">Compare &amp; book →</a>
-        ${airline(r.airline) ? `<a class="btn btn-ghost" href="${esc(searchLink(r, airlineName(r.airline)))}" target="_blank" rel="noopener">Book with ${esc(airlineName(r.airline))}</a>` : ""}
+        ${bookable(r.airline) ? `<a class="btn btn-ghost" href="${esc(searchLink(r, airlineName(r.airline)))}" target="_blank" rel="noopener">Book with ${esc(airlineName(r.airline))}</a>` : ""}
       </div>
     </article>`;
   };
 
   const row = (r) => `
     <tr class="${r.isDeal ? "deal" : ""}">
-      <td><b>${esc(r.city)}</b><span class="code">${esc(r.destination)}</span></td>
+      <td><b>${esc(r.city)}</b><span class="code">${esc(r.destination)}</span>${r.live ? `<span class="code live-code">LIVE</span>` : ""}</td>
       <td class="num"><b>${nzd(r.price)}</b></td>
       <td class="num muted">${r.normal ? nzd(r.normal) : "Learning…"}</td>
       <td class="num">${r.percentOff == null ? "–" : r.isDeal ? `<span class="tag">−${r.percentOff}%</span>` : `${r.percentOff > 0 ? "−" : "+"}${Math.abs(r.percentOff)}%`}</td>
@@ -203,6 +210,9 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
   .card h3.xlong { font-size:clamp(20px, 1.8vw, 24px); }
   .price { font:400 48px/.9 var(--display); margin:20px 0 4px; }
   .was { margin:0; font-size:14px; } .was s { opacity:.55; }
+  .live { margin:8px 0 0; font:700 11px/1.3 var(--ui); letter-spacing:.032em; text-transform:uppercase; opacity:.55; }
+  .live.on { opacity:1; }
+  .live-code { background:var(--mint); }
   .chips { display:flex; flex-wrap:wrap; gap:4px; margin:16px 0 20px; }
   .chip { border:1px solid var(--carbon); border-radius:1600px; padding:5px 10px; font:700 12px/1 var(--ui); letter-spacing:.02em; background:var(--paper); }
   .actions { margin-top:auto; display:flex; flex-wrap:wrap; gap:6px; }
@@ -265,7 +275,7 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
     <div class="wrap">
       <div class="section-head">
         <h2>The<br>deals</h2>
-        <p>Cheapest return fare per destination over the next ${settings.monthsAhead || 6} months, ranked by how far below usual it is.</p>
+        <p>Cheapest return fare per destination over the next ${settings.monthsAhead || 6} months, ranked by how far below usual it is.${settings.serpApiKey ? " Every deal here has been confirmed with a live Google Flights price." : ""}</p>
       </div>
       ${deals.length ? `<div class="grid">${deals.map(card).join("")}</div>` : `<div class="empty">Nothing ${threshold}%+ below usual today. The monitor checks again tomorrow morning and emails you the moment one shows up.</div>`}
     </div>
@@ -277,13 +287,13 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
     <div class="wrap">
       <div class="section-head">
         <h2>All<br>routes</h2>
-        <p>Deals are highlighted. "Usual" starts as a rough estimate and switches to this monitor's own price history after 5 days of checks.</p>
+        <p>Rows marked LIVE were re-checked on Google Flights this morning, with Google's typical price as "usual". Other rows are cached prices from the last 48 hours.</p>
       </div>
       <div class="tablewrap"><table>
         <thead><tr><th>Destination</th><th class="num">Fare</th><th class="num">Usual</th><th class="num">vs usual</th><th>Dates</th><th>Airline</th><th></th></tr></thead>
         <tbody>${routes.map(row).join("")}</tbody>
       </table></div>
-      <footer>Fares are cached prices seen in the last 48 hours and can change. Buttons open Google Flights with your dates filled in; pick a flight there and choose \"Book with\" the airline to book directly. Confirm the price there before paying.</footer>
+      <footer>LIVE prices were checked on Google Flights at the time shown above; other prices are cached from the last 48 hours. Fares change quickly. Buttons open Google Flights with your dates filled in; pick a flight there and choose \"Book with\" the airline to book directly. Confirm the price there before paying.</footer>
     </div>
   </section>
 </body></html>`;

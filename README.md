@@ -6,9 +6,11 @@ Every morning it checks the cheapest return fare from Auckland to every destinat
 
 GitHub Actions runs `check.mjs` every day at 18:00 UTC (7am NZ summer time, 6am NZ winter time), saves the price history back to this repository, and publishes the dashboard to GitHub Pages. Your Mac doesn't need to be on. To run it straight away, open the **Actions** tab, choose **Daily flight check**, then **Run workflow**.
 
+Each morning it scans every route using cached prices (Travelpayouts), then re-checks the most promising few live on Google Flights (SerpApi). Only live-confirmed fares count as deals, and Google's typical price range is used as "usual". Without a SerpApi key it falls back to cached prices only.
+
 Keys are never stored in the code:
-- **On GitHub:** repository secrets `TRAVELPAYOUTS_TOKEN`, `RESEND_API_KEY` and `EMAIL_TO` (Settings → Secrets and variables → Actions).
-- **On your Mac:** `settings.local.json` (not uploaded), with `travelpayoutsToken`, `resendApiKey` and `emailTo`.
+- **On GitHub:** repository secrets `TRAVELPAYOUTS_TOKEN`, `RESEND_API_KEY`, `EMAIL_TO` and `SERPAPI_KEY` (Settings → Secrets and variables → Actions).
+- **On your Mac:** `settings.local.json` (not uploaded), with `travelpayoutsToken`, `resendApiKey`, `emailTo` and `serpApiKey`.
 
 Keys come from your Travelpayouts profile (API token tab) and from https://resend.com (sign up with the address the alerts should go to).
 
@@ -19,6 +21,7 @@ To run a check on your Mac instead: `node check.mjs` (add `--test-email` to re-s
 - `dealThresholdPercent`: how far below usual a fare must be to count as a deal (default 35).
 - `monthsAhead`: how many months of departure dates to search (default 6).
 - `includeDomestic`: set to `true` to include NZ domestic routes.
+- `liveChecksPerDay`: how many of the day's best cached fares get re-checked live on Google Flights (default 5, which is about 150 SerpApi searches a month).
 
 ## Good to know
 

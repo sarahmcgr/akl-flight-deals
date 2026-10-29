@@ -3,5 +3,6 @@
   "currency": "nzd",
   "dealThresholdPercent": 35,
   "monthsAhead": 6,
-  "includeDomestic": false
+  "includeDomestic": false,
+  "liveChecksPerDay": 5
 }

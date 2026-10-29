@@ -30,6 +30,8 @@ async function main() {
   if (process.env.TRAVELPAYOUTS_TOKEN) settings.travelpayoutsToken = process.env.TRAVELPAYOUTS_TOKEN;
   if (process.env.RESEND_API_KEY) settings.resendApiKey = process.env.RESEND_API_KEY;
   if (process.env.EMAIL_TO) settings.emailTo = process.env.EMAIL_TO;
+  if (process.env.SERPAPI_KEY) settings.serpApiKey = process.env.SERPAPI_KEY;
+  const noEmail = process.argv.includes("--no-email");
   const typical = await readJson(join(ROOT, "typical-prices.json"), {});
   await mkdir(DATA, { recursive: true });
 
@@ -69,6 +71,13 @@ async function main() {
     await writeJson(historyFile, history);
   }
 
+  // Cached prices only nominate candidates; a live Google Flights check decides what counts as a deal
+  let liveStatus = "";
+  if (!demo && settings.serpApiKey) {
+    liveStatus = await liveCheck(routes, settings, threshold);
+    routes.sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || (b.percentOff ?? -999) - (a.percentOff ?? -999));
+  }
+
   // Work out which deals haven't been emailed yet (or have dropped another 5%+)
   const sentFile = join(DATA, "sent.json");
   const sent = await readJson(sentFile, {});
@@ -86,7 +95,8 @@ async function main() {
 
   let emailStatus = "no new deals to email";
   if (toEmail.length) {
-    if (demo && !testEmail) emailStatus = "demo mode, email not sent (preview saved to data/last-email.html)";
+    if (noEmail) emailStatus = "--no-email, not sent (preview saved to data/last-email.html)";
+    else if (demo && !testEmail) emailStatus = "demo mode, email not sent (preview saved to data/last-email.html)";
     else if (!settings.resendApiKey || !settings.emailTo) emailStatus = "email not set up yet (preview saved to data/last-email.html)";
     else {
       await sendEmail(toEmail, settings, demo);
@@ -98,10 +108,58 @@ async function main() {
     }
   }
 
-  console.log(`[${new Date().toLocaleString("en-NZ")}] ${demo ? "DEMO DATA. " : ""}${routes.length} destinations checked, ${deals.length} deal(s), ${emailStatus}.`);
+  console.log(`[${new Date().toLocaleString("en-NZ")}] ${demo ? "DEMO DATA. " : ""}${routes.length} destinations checked, ${liveStatus}${deals.length} deal(s), ${emailStatus}.`);
 }
 
 const dealKey = (d) => `${d.destination}|${d.departDate}|${d.returnDate}`;
+
+// Google Flights wants airports, not the metro codes the cached feed uses
+const METRO_AIRPORTS = {
+  LON: "LHR,LGW", NYC: "JFK,EWR", TYO: "NRT,HND", PAR: "CDG,ORY", SEL: "ICN", OSA: "KIX", BJS: "PEK,PKX",
+  SHA: "PVG", ROM: "FCO", MIL: "MXP,LIN", YTO: "YYZ", MOW: "SVO,DME", RIO: "GIG", BUE: "EZE", CHI: "ORD",
+  WAS: "IAD,DCA", STO: "ARN", BER: "BER", JKT: "CGK", BKK: "BKK,DMK", SAO: "GRU", REK: "KEF", DPS: "DPS",
+};
+
+async function liveCheck(routes, settings, threshold) {
+  const want = settings.liveChecksPerDay ?? 5;
+  const account = await fetch(`https://serpapi.com/account.json?api_key=${encodeURIComponent(settings.serpApiKey)}`).then((r) => r.json()).catch(() => null);
+  const left = account?.total_searches_left ?? account?.plan_searches_left ?? want;
+  const n = Math.min(want, left);
+  if (n <= 0) return "live checks skipped (SerpApi searches used up this month), ";
+
+  // Every route stops being a deal until a live price confirms it
+  for (const r of routes) r.isDeal = false;
+  const candidates = routes.filter((r) => r.percentOff != null && r.departDate && r.returnDate).slice(0, n);
+
+  let done = 0;
+  for (const r of candidates) {
+    const url = new URL("https://serpapi.com/search.json");
+    url.search = new URLSearchParams({
+      engine: "google_flights", departure_id: settings.origin || "AKL", arrival_id: METRO_AIRPORTS[r.destination] || r.destination,
+      outbound_date: r.departDate, return_date: r.returnDate, type: "1", currency: "NZD", hl: "en", gl: "nz",
+      api_key: settings.serpApiKey,
+    });
+    const body = await fetch(url).then((res) => res.json()).catch(() => ({}));
+    if (body.error) { r.liveError = body.error; continue; }
+    const flights = [...(body.best_flights || []), ...(body.other_flights || [])].filter((f) => f.price);
+    const cheapest = flights.sort((a, b) => a.price - b.price)[0];
+    const lowest = body.price_insights?.lowest_price ?? cheapest?.price;
+    if (!lowest) { r.liveError = "no fares found"; continue; }
+
+    const range = body.price_insights?.typical_price_range;
+    r.cachedPrice = r.price;
+    r.price = Math.round(lowest);
+    if (range?.length === 2) { r.normal = Math.round((range[0] + range[1]) / 2); r.typicalRange = range; r.normalSource = "google"; }
+    r.priceLevel = body.price_insights?.price_level || null;
+    if (cheapest?.flights?.[0]?.airline) r.airline = cheapest.flights[0].airline;
+    if (cheapest?.flights) r.stops = Math.max(0, cheapest.flights.length - 1);
+    r.percentOff = r.normal ? Math.round((1 - r.price / r.normal) * 100) : null;
+    r.isDeal = r.normal != null && r.price <= r.normal * (1 - threshold);
+    r.live = true;
+    done++;
+  }
+  return `${done} live-checked, `;
+}
 
 async function fetchFares(settings) {
   const origin = settings.origin || "AKL";
