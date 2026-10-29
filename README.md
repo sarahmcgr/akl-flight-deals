@@ -23,6 +23,6 @@ To run a check on your Mac instead: `node check.mjs` (add `--test-email` to re-s
 ## Good to know
 
 - "Usual price" starts from rough estimates in `typical-prices.json`. After 5 days of checks for a destination, it switches to the median of prices the monitor has seen itself.
-- Prices are cached fares found by Aviasales users in the last 48 hours, so confirm on the booking site before you pay.
+- Prices are cached fares (from the Aviasales data feed) seen in the last 48 hours. The buttons open Google Flights or the airline's own site so you book directly; confirm the price there before you pay.
 - You won't get the same deal twice unless it drops a further 5% or two weeks pass.
 - Log of each run: `data/monitor.log`.

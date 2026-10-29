@@ -5,7 +5,32 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const nzd = (n) => `NZ$${Number(n).toLocaleString("en-NZ")}`;
 const fmtDate = (d) => d ? new Date(d + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short" }) : "";
 const stopsText = (n) => (n === 0 ? "Direct" : `${n} stop${n > 1 ? "s" : ""}`);
-const searchLink = (r) => r.link || `https://www.google.com/travel/flights?q=${encodeURIComponent(`flights AKL to ${r.destination} ${r.departDate} returning ${r.returnDate}`)}`;
+// Google Flights search with route and dates filled in; it lists airline-direct booking options
+const searchLink = (r) => `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from Auckland to ${r.city} on ${r.departDate} through ${r.returnDate}`)}&curr=NZD&hl=en-NZ`;
+
+// Airlines that commonly show up on Auckland routes (IATA code → booking site)
+const AIRLINES = {
+  NZ: ["Air New Zealand", "https://www.airnewzealand.co.nz"], JQ: ["Jetstar", "https://www.jetstar.com/nz/en"],
+  QF: ["Qantas", "https://www.qantas.com/nz/en"], VA: ["Virgin Australia", "https://www.virginaustralia.com/nz/en"],
+  FJ: ["Fiji Airways", "https://www.fijiairways.com"], SB: ["Aircalin", "https://www.aircalin.com"],
+  TN: ["Air Tahiti Nui", "https://www.airtahitinui.com"], NF: ["Air Vanuatu", "https://www.airvanuatu.com"],
+  SQ: ["Singapore Airlines", "https://www.singaporeair.com/en_UK/nz"], CX: ["Cathay Pacific", "https://www.cathaypacific.com/cx/en_NZ.html"],
+  EK: ["Emirates", "https://www.emirates.com/nz/english"], QR: ["Qatar Airways", "https://www.qatarairways.com/en-nz"],
+  CZ: ["China Southern", "https://www.csair.com/nz/en"], MU: ["China Eastern", "https://us.ceair.com/en"],
+  CA: ["Air China", "https://www.airchina.com"], HU: ["Hainan Airlines", "https://www.hainanairlines.com"],
+  MH: ["Malaysia Airlines", "https://www.malaysiaairlines.com/nz/en.html"], TG: ["Thai Airways", "https://www.thaiairways.com"],
+  KE: ["Korean Air", "https://www.koreanair.com"], OZ: ["Asiana", "https://flyasiana.com"],
+  NH: ["ANA", "https://www.ana.co.jp/en/nz"], JL: ["Japan Airlines", "https://www.jal.co.jp/en"],
+  PR: ["Philippine Airlines", "https://www.philippineairlines.com"], VN: ["Vietnam Airlines", "https://www.vietnamairlines.com"],
+  GA: ["Garuda Indonesia", "https://www.garuda-indonesia.com"], CI: ["China Airlines", "https://www.china-airlines.com"],
+  BR: ["EVA Air", "https://www.evaair.com"], AI: ["Air India", "https://www.airindia.com"],
+  AC: ["Air Canada", "https://www.aircanada.com/nz/en"], UA: ["United", "https://www.united.com"],
+  AA: ["American Airlines", "https://www.aa.com"], DL: ["Delta", "https://www.delta.com"],
+  HA: ["Hawaiian Airlines", "https://www.hawaiianairlines.com"], LA: ["LATAM", "https://www.latamairlines.com/nz/en"],
+  EY: ["Etihad", "https://www.etihad.com/en-nz"], TK: ["Turkish Airlines", "https://www.turkishairlines.com"],
+};
+const airline = (code) => AIRLINES[code] || null;
+const airlineName = (code) => airline(code)?.[0] || code;
 
 // Sticker palette, cycled across deal badges: [fill, text]
 const STICKERS = [["#fb4903", "#fff"], ["#ffd731", "#000"], ["#55db9c", "#000"], ["#e9ccff", "#000"], ["#5c4ade", "#fff"], ["#4da2ff", "#000"]];
@@ -24,8 +49,8 @@ export function renderEmail(deals, settings) {
           <div style="${font};font-size:13px;color:#000;opacity:.6;margin-top:2px">${esc(d.country)}</div>
           <div style="${font};margin-top:12px"><b style="font-size:26px;color:#000">${nzd(d.price)}</b>
             <span style="text-decoration:line-through;color:#000;opacity:.45;margin-left:6px;font-size:15px">${nzd(d.normal)}</span></div>
-          <div style="${font};font-size:13px;color:#000;opacity:.7;margin-top:4px">${fmtDate(d.departDate)} – ${fmtDate(d.returnDate)} · ${esc(d.airline)} · ${stopsText(d.stops)}</div>
-          <a href="${esc(searchLink(d))}" style="display:inline-block;margin-top:14px;background:#000;color:#fff;border-radius:999px;padding:10px 16px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">SEE THIS FARE →</a>
+          <div style="${font};font-size:13px;color:#000;opacity:.7;margin-top:4px">${fmtDate(d.departDate)} – ${fmtDate(d.returnDate)} · ${esc(airlineName(d.airline))} · ${stopsText(d.stops)}</div>
+          <a href="${esc(searchLink(d))}" style="display:inline-block;margin-top:14px;background:#000;color:#fff;border-radius:999px;padding:10px 16px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">COMPARE &amp; BOOK →</a>${airline(d.airline) ? ` <a href="${esc(airline(d.airline)[1])}" style="display:inline-block;margin:14px 0 0 6px;background:#fff;color:#000;border:1px solid #000;border-radius:999px;padding:9px 15px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">${esc(airlineName(d.airline).toUpperCase())} SITE</a>` : ""}
         </td></tr>
       </table>
     </td></tr>`;
@@ -80,10 +105,13 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
       <p class="was">Usually <s>${nzd(r.normal)}</s></p>
       <div class="chips">
         <span class="chip">${fmtDate(r.departDate)} – ${fmtDate(r.returnDate)}</span>
-        <span class="chip">${esc(r.airline)}</span>
+        <span class="chip">${esc(airlineName(r.airline))}</span>
         <span class="chip">${stopsText(r.stops)}</span>
       </div>
-      <a class="btn btn-fill" href="${esc(searchLink(r))}" target="_blank" rel="noopener">See this fare →</a>
+      <div class="actions">
+        <a class="btn btn-fill" href="${esc(searchLink(r))}" target="_blank" rel="noopener">Compare &amp; book →</a>
+        ${airline(r.airline) ? `<a class="btn btn-ghost" href="${esc(airline(r.airline)[1])}" target="_blank" rel="noopener">Airline site</a>` : ""}
+      </div>
     </article>`;
   };
 
@@ -94,8 +122,8 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
       <td class="num muted">${r.normal ? nzd(r.normal) : "Learning…"}</td>
       <td class="num">${r.percentOff == null ? "–" : r.isDeal ? `<span class="tag">−${r.percentOff}%</span>` : `${r.percentOff > 0 ? "−" : "+"}${Math.abs(r.percentOff)}%`}</td>
       <td>${fmtDate(r.departDate)} – ${fmtDate(r.returnDate)}</td>
-      <td>${esc(r.airline)} · ${stopsText(r.stops)}</td>
-      <td><a class="btn btn-ghost btn-sm" href="${esc(searchLink(r))}" target="_blank" rel="noopener">View</a></td>
+      <td>${esc(airlineName(r.airline))} · ${stopsText(r.stops)}</td>
+      <td><a class="btn btn-ghost btn-sm" href="${esc(searchLink(r))}" target="_blank" rel="noopener">Compare</a></td>
     </tr>`;
 
   return `<!doctype html>
@@ -176,7 +204,7 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
   .was { margin:0; font-size:14px; } .was s { opacity:.55; }
   .chips { display:flex; flex-wrap:wrap; gap:4px; margin:16px 0 20px; }
   .chip { border:1px solid var(--carbon); border-radius:1600px; padding:5px 10px; font:700 12px/1 var(--ui); letter-spacing:.02em; background:var(--paper); }
-  .card .btn { margin-top:auto; align-self:flex-start; }
+  .actions { margin-top:auto; display:flex; flex-wrap:wrap; gap:6px; }
   .empty { position:relative; z-index:1; background:var(--paper); border:1px solid var(--carbon); border-radius:40px; padding:40px; font:500 20px/1.3 var(--ui); margin-bottom:80px; max-width:720px; }
 
   /* Table */
@@ -254,7 +282,7 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
         <thead><tr><th>Destination</th><th class="num">Fare</th><th class="num">Usual</th><th class="num">vs usual</th><th>Dates</th><th>Airline</th><th></th></tr></thead>
         <tbody>${routes.map(row).join("")}</tbody>
       </table></div>
-      <footer>Prices are cached fares found by Aviasales users in the last 48 hours and can change. Confirm before booking.</footer>
+      <footer>Fares are cached prices seen in the last 48 hours and can change. Buttons open Google Flights or the airline's own site, so you book directly. Confirm the price there before paying.</footer>
     </div>
   </section>
 </body></html>`;

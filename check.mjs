@@ -131,7 +131,7 @@ async function fetchFares(settings) {
         stops: Math.max(t.transfers ?? 0, t.return_transfers ?? 0),
         departDate: t.departure_at?.slice(0, 10),
         returnDate: t.return_at?.slice(0, 10),
-        link: t.link ? `https://www.aviasales.com${t.link}` : null,
+
       };
       if (!best.has(fare.destination) || fare.price < best.get(fare.destination).price) best.set(fare.destination, fare);
     }
