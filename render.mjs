@@ -6,7 +6,8 @@ const nzd = (n) => `NZ$${Number(n).toLocaleString("en-NZ")}`;
 const fmtDate = (d) => d ? new Date(d + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short" }) : "";
 const stopsText = (n) => (n === 0 ? "Direct" : `${n} stop${n > 1 ? "s" : ""}`);
 // Google Flights search with route and dates filled in; it lists airline-direct booking options
-const searchLink = (r) => `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from Auckland to ${r.city} on ${r.departDate} through ${r.returnDate}`)}&curr=NZD&hl=en-NZ`;
+// Passing an airline narrows it to that airline's flights; its "Book with <airline>" button opens the airline site pre-filled
+const searchLink = (r, airlineOnly) => `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from Auckland to ${r.city} on ${r.departDate} through ${r.returnDate}${airlineOnly ? ` on ${airlineOnly}` : ""}`)}&curr=NZD&hl=en-NZ`;
 
 // Airlines that commonly show up on Auckland routes (IATA code → booking site)
 const AIRLINES = {
@@ -50,7 +51,7 @@ export function renderEmail(deals, settings) {
           <div style="${font};margin-top:12px"><b style="font-size:26px;color:#000">${nzd(d.price)}</b>
             <span style="text-decoration:line-through;color:#000;opacity:.45;margin-left:6px;font-size:15px">${nzd(d.normal)}</span></div>
           <div style="${font};font-size:13px;color:#000;opacity:.7;margin-top:4px">${fmtDate(d.departDate)} – ${fmtDate(d.returnDate)} · ${esc(airlineName(d.airline))} · ${stopsText(d.stops)}</div>
-          <a href="${esc(searchLink(d))}" style="display:inline-block;margin-top:14px;background:#000;color:#fff;border-radius:999px;padding:10px 16px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">COMPARE &amp; BOOK →</a>${airline(d.airline) ? ` <a href="${esc(airline(d.airline)[1])}" style="display:inline-block;margin:14px 0 0 6px;background:#fff;color:#000;border:1px solid #000;border-radius:999px;padding:9px 15px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">${esc(airlineName(d.airline).toUpperCase())} SITE</a>` : ""}
+          <a href="${esc(searchLink(d))}" style="display:inline-block;margin-top:14px;background:#000;color:#fff;border-radius:999px;padding:10px 16px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">COMPARE &amp; BOOK →</a>${airline(d.airline) ? ` <a href="${esc(searchLink(d, airlineName(d.airline)))}" style="display:inline-block;margin:14px 0 0 6px;background:#fff;color:#000;border:1px solid #000;border-radius:999px;padding:9px 15px;${font};font-weight:700;font-size:13px;letter-spacing:.03em;text-decoration:none">BOOK WITH ${esc(airlineName(d.airline).toUpperCase())}</a>` : ""}
         </td></tr>
       </table>
     </td></tr>`;
@@ -110,7 +111,7 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
       </div>
       <div class="actions">
         <a class="btn btn-fill" href="${esc(searchLink(r))}" target="_blank" rel="noopener">Compare &amp; book →</a>
-        ${airline(r.airline) ? `<a class="btn btn-ghost" href="${esc(airline(r.airline)[1])}" target="_blank" rel="noopener">Airline site</a>` : ""}
+        ${airline(r.airline) ? `<a class="btn btn-ghost" href="${esc(searchLink(r, airlineName(r.airline)))}" target="_blank" rel="noopener">Book with ${esc(airlineName(r.airline))}</a>` : ""}
       </div>
     </article>`;
   };
@@ -282,7 +283,7 @@ export function renderDashboard({ routes, settings, demo, checkedAt }) {
         <thead><tr><th>Destination</th><th class="num">Fare</th><th class="num">Usual</th><th class="num">vs usual</th><th>Dates</th><th>Airline</th><th></th></tr></thead>
         <tbody>${routes.map(row).join("")}</tbody>
       </table></div>
-      <footer>Fares are cached prices seen in the last 48 hours and can change. Buttons open Google Flights or the airline's own site, so you book directly. Confirm the price there before paying.</footer>
+      <footer>Fares are cached prices seen in the last 48 hours and can change. Buttons open Google Flights with your dates filled in; pick a flight there and choose \"Book with\" the airline to book directly. Confirm the price there before paying.</footer>
     </div>
   </section>
 </body></html>`;
