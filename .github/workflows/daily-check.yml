@@ -2,7 +2,7 @@ name: Daily flight check
 
 on:
   schedule:
-    - cron: "0 18 * * *" # 18:00 UTC = 7am NZDT (6am during NZ winter time)
+    - cron: "23 16 * * *" # 16:23 UTC = 5:23am NZDT (4:23am during NZ winter time). Off the hour, since GitHub often starts scheduled runs late
   workflow_dispatch: # "Run workflow" button on GitHub
 
 permissions:

@@ -4,7 +4,7 @@ Every morning it checks the cheapest return fare from Auckland to every destinat
 
 ## Where it runs
 
-GitHub Actions runs `check.mjs` every day at 18:00 UTC (7am NZ summer time, 6am NZ winter time), saves the price history back to this repository, and publishes the dashboard to GitHub Pages. Your Mac doesn't need to be on. To run it straight away, open the **Actions** tab, choose **Daily flight check**, then **Run workflow**.
+GitHub Actions runs `check.mjs` every day at 16:23 UTC (5:23am NZ summer time, 4:23am NZ winter time; GitHub often starts scheduled runs an hour or more late, so emails usually arrive by breakfast), saves the price history back to this repository, and publishes the dashboard to GitHub Pages. Your Mac doesn't need to be on. To run it straight away, open the **Actions** tab, choose **Daily flight check**, then **Run workflow**.
 
 Each morning it scans every route using cached prices (Travelpayouts), then re-checks the most promising few live on Google Flights (SerpApi). Only live-confirmed fares count as deals, and Google's typical price range is used as "usual". Without a SerpApi key it falls back to cached prices only.
 
